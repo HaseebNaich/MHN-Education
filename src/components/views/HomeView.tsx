@@ -15,7 +15,10 @@ import {
   Cpu, 
   ShieldCheck, 
   Video,
-  Award
+  Award,
+  MapPin,
+  MessageSquare,
+  Bot
 } from 'lucide-react';
 import { LEVEL_OPTIONS } from '../../data/curriculumData';
 
@@ -74,8 +77,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
             <div className="flex flex-wrap gap-2 pt-1">
               <button 
+                onClick={() => setCurrentView('scholar')}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl text-xs font-semibold transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
+              >
+                <GraduationCap className="w-3.5 h-3.5 text-amber-300" />
+                <span>Google Scholar Courses & Notes</span>
+              </button>
+              <button 
+                onClick={() => setCurrentView('chat')}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
+              >
+                <Bot className="w-3.5 h-3.5 text-amber-300" />
+                <span>AI Chatbot</span>
+              </button>
+              <button 
                 onClick={() => onOpenAITutor("Start visual proof of Integration by parts and Chain Rule step by step")}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition-all shadow-md shadow-indigo-600/20"
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-all border border-slate-700"
               >
                 Start Proof
               </button>
@@ -84,12 +101,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-all border border-slate-700"
               >
                 Generate Quiz
-              </button>
-              <button 
-                onClick={() => onOpenAITutor("Explain the difference between Agile Scrum and Waterfall SDLC")}
-                className="px-4 py-2 border border-slate-800 hover:border-slate-700 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-900 transition-all"
-              >
-                Ask a Question
               </button>
               <button 
                 onClick={() => setCurrentView('programming')}
@@ -291,7 +302,84 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Bento Card: AI Tutor */}
+          {/* Bento Card: Google Scholar Courses & Notes */}
+          <div 
+            onClick={() => setCurrentView('scholar')}
+            className="bg-slate-900/40 border border-slate-800 hover:border-indigo-500/50 rounded-3xl p-6 cursor-pointer transition transform hover:-translate-y-0.5 space-y-4 group md:col-span-2 relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-48 h-48 bg-purple-600/10 blur-[80px] rounded-full pointer-events-none" />
+            <div className="flex items-center justify-between">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                <GraduationCap className="w-6 h-6 text-amber-300" />
+              </div>
+              <span className="px-3 py-1 bg-indigo-500/10 text-indigo-300 text-[10px] font-bold uppercase tracking-wider rounded-full border border-indigo-500/20">
+                Google Scholar Hub
+              </span>
+            </div>
+            <div>
+              <h3 className="font-bold text-lg text-white group-hover:text-indigo-300 transition">
+                Google Scholar Free Courses & Research Notes
+              </h3>
+              <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">
+                Free open curricula from Google DeepMind, MIT, Stanford, Harvard, and Oxford. Review landmark research papers (Transformers, ResNet, MapReduce, Information Theory) with step-by-step mathematical proofs and open access links.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-[10px] text-slate-300">
+              <span className="bg-slate-950/80 px-2.5 py-1 rounded-md border border-slate-800">DeepMind DL Series</span>
+              <span className="bg-slate-950/80 px-2.5 py-1 rounded-md border border-slate-800">Stanford CS229</span>
+              <span className="bg-slate-950/80 px-2.5 py-1 rounded-md border border-slate-800">MIT 6.006 Algorithms</span>
+              <span className="bg-slate-950/80 px-2.5 py-1 rounded-md border border-slate-800">Harvard CS50</span>
+            </div>
+            <div className="text-xs text-indigo-400 font-semibold flex items-center gap-1 pt-1">
+              Explore Scholar Courses & Monograph Notes <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </div>
+
+          {/* Bento Card: Gemini Multi-Turn Chatbot */}
+          <div 
+            onClick={() => setCurrentView('chat')}
+            className="bg-slate-900/40 border border-slate-800 hover:border-emerald-500/50 rounded-3xl p-6 cursor-pointer transition transform hover:-translate-y-0.5 space-y-4 group relative overflow-hidden"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+              <Bot className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-base text-white group-hover:text-emerald-300 transition">
+                  Gemini Multi-Turn Chatbot
+                </h3>
+              </div>
+              <p className="text-slate-400 text-xs mt-1 leading-relaxed">
+                Interactive dialogue maintaining complete conversation history across turns. Ask complex follow-up questions, request mathematical proofs, and select scholar personas.
+              </p>
+            </div>
+            <div className="text-xs text-emerald-400 font-semibold flex items-center gap-1 pt-1">
+              Open Multi-Turn Chatbot <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </div>
+
+          {/* Bento Card: Campus & Libraries (Google Maps) */}
+          <div 
+            onClick={() => setCurrentView('scholar')}
+            className="bg-slate-900/40 border border-slate-800 hover:border-rose-500/50 rounded-3xl p-6 cursor-pointer transition transform hover:-translate-y-0.5 space-y-4 group"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center">
+              <MapPin className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base text-white group-hover:text-rose-300 transition">
+                Campus & Library Locator
+              </h3>
+              <p className="text-slate-400 text-xs mt-1 leading-relaxed">
+                Powered by Google Maps Grounding. Find university libraries, academic reading halls, research institutes, and quiet study spaces near any campus or city worldwide.
+              </p>
+            </div>
+            <div className="text-xs text-rose-400 font-semibold flex items-center gap-1 pt-1">
+              Find Nearby Libraries on Google Maps <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </div>
+
+          {/* Bento Card: 24/7 AI Tutor */}
           <div 
             onClick={() => onOpenAITutor()}
             className="bg-slate-900/40 border border-slate-800 hover:border-indigo-500/40 rounded-3xl p-6 cursor-pointer transition transform hover:-translate-y-0.5 space-y-4 group"

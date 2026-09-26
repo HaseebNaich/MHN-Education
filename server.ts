@@ -54,7 +54,7 @@ Provide clear, structured explanations with key concepts, examples, formulas/cod
     const fullPrompt = context ? `Context: ${context}\n\nStudent Question: ${prompt}` : prompt;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
       contents: fullPrompt,
       config: {
         systemInstruction,
@@ -72,7 +72,181 @@ Provide clear, structured explanations with key concepts, examples, formulas/cod
   }
 });
 
-// 2. AI Quiz Generator Endpoint
+// 2. Multi-turn Educational Chatbot Endpoint (Maintains conversation history)
+app.post("/api/ai/chat", async (req, res) => {
+  try {
+    const { messages, systemPrompt, academicContext } = req.body;
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: "Messages array is required for multi-turn chat" });
+    }
+
+    const ai = getGeminiClient();
+
+    if (!ai) {
+      const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')?.content || "Hello";
+      return res.json({
+        text: `[MHN Scholar AI Tutor]: I understand you are asking about: **"${lastUserMsg}"**.\n\nHere is a structured explanation:\n- **Overview**: This concept is fundamental in your academic curriculum.\n- **Deep Dive**: In real-world software engineering and academic research, this is analyzed through theoretical proofs and practical implementations.\n- **Follow-up question**: Would you like a step-by-step mathematical derivation, code example in Python/C++, or practice quiz questions on this?\n\n*(Note: Set your GEMINI_API_KEY in Secrets for live AI generation)*`,
+        source: "fallback",
+        role: "model"
+      });
+    }
+
+    const systemInstruction = systemPrompt || `You are MHN Education Scholar AI, an elite university professor, tutor, and educational guide.
+Maintain contextual memory across all turns of the conversation.
+${academicContext ? `Current Academic Context: ${academicContext}\n` : ""}
+Provide thorough, structured, pedagogical answers with step-by-step proofs, formulas, code, and conceptual breakdowns in clean Markdown. Answer follow-up questions clearly in the context of preceding dialogue.`;
+
+    const contents = messages.map((m: any) => ({
+      role: m.role === "user" ? "user" : "model",
+      parts: [{ text: String(m.content || "") }],
+    }));
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.8-flash",
+      contents,
+      config: {
+        systemInstruction,
+        temperature: 0.7,
+      },
+    });
+
+    res.json({
+      text: response.text || "No response generated.",
+      role: "model",
+      source: "gemini",
+    });
+  } catch (error: any) {
+    console.error("AI Multi-turn Chat Error:", error);
+    res.status(500).json({ error: error?.message || "Failed in multi-turn chat" });
+  }
+});
+
+// 3. Google Maps Grounding: Academic Study Hubs, Research Libraries & University Campus Finder
+app.post("/api/ai/academic-places", async (req, res) => {
+  try {
+    const { query, latitude, longitude } = req.body;
+    const ai = getGeminiClient();
+
+    const locationQuery = query || "University research libraries, academic study centers, and national book archives";
+
+    if (!ai) {
+      // Fallback with real Google Maps search links
+      return res.json({
+        text: `### 🏛️ University Libraries & Academic Study Centers\nHere are premier academic libraries and study hubs for scholars and students researching near ${locationQuery}:\n\n1. **National & University Library Central Archive**: Quiet study desks, open research databases, and academic journal stacks.\n2. **University Science & Computing Reading Hall**: Equipped with Wi-Fi, high-speed academic research terminals, and quiet study carrels.\n3. **Public Academic & Tech Library**: Free community access to reference books, technical documentation, and seminar rooms.\n\n*(Connect GEMINI_API_KEY in Secrets to enable live Google Maps Grounding place retrieval)*`,
+        places: [
+          {
+            title: "Harvard Widener & Lamont Academic Libraries",
+            uri: "https://www.google.com/maps/search/Harvard+University+Widener+Library",
+            snippet: "Flagship academic research library with 3.5+ million volumes, study halls, and research carrels."
+          },
+          {
+            title: "MIT Barker & Hayden Engineering Libraries",
+            uri: "https://www.google.com/maps/search/MIT+Barker+Engineering+Library",
+            snippet: "Quiet academic study space with engineering archives, collaboration zones, and computing labs."
+          },
+          {
+            title: "Stanford Green Library & Tech Center",
+            uri: "https://www.google.com/maps/search/Stanford+University+Green+Library",
+            snippet: "Major humanities and social sciences library with digital research centers and group study spaces."
+          },
+          {
+            title: "British Library & Academic Reading Rooms",
+            uri: "https://www.google.com/maps/search/British+Library+London",
+            snippet: "The national library of the United Kingdom with millions of cataloged open research manuscripts."
+          }
+        ],
+        source: "fallback"
+      });
+    }
+
+    const contents = `Find top university libraries, research institutes, academic study centers, and book archives for students and researchers in or near: ${locationQuery}.
+Provide an informative summary of study facilities, quiet reading zones, access rules, and academic resources available.`;
+
+    const toolConfig: any = {};
+    if (latitude && longitude && !isNaN(Number(latitude)) && !isNaN(Number(longitude))) {
+      toolConfig.retrievalConfig = {
+        latLng: {
+          latitude: Number(latitude),
+          longitude: Number(longitude),
+        },
+      };
+    }
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents,
+      config: {
+        tools: [{ googleMaps: {} }],
+        toolConfig: Object.keys(toolConfig).length > 0 ? toolConfig : undefined,
+      },
+    });
+
+    // Extract Google Maps URLs and review snippets from groundingChunks as mandated
+    const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
+    const groundingChunks = (groundingMetadata as any)?.groundingChunks || [];
+    const places: Array<{ title: string; uri: string; snippet?: string }> = [];
+
+    for (const chunk of groundingChunks) {
+      if (chunk.maps) {
+        const uri = chunk.maps.uri || "";
+        const title = chunk.maps.title || "Academic Location on Google Maps";
+        let snippet = "";
+        if (chunk.maps.placeAnswerSources?.reviewSnippets && chunk.maps.placeAnswerSources.reviewSnippets.length > 0) {
+          snippet = chunk.maps.placeAnswerSources.reviewSnippets[0];
+        }
+        if (uri) {
+          places.push({ title, uri, snippet });
+        }
+      }
+    }
+
+    res.json({
+      text: response.text || "No location details generated.",
+      places,
+      groundingMetadata,
+      source: "gemini-maps-grounding",
+    });
+  } catch (error: any) {
+    console.error("Academic Places / Maps Grounding Error:", error);
+    res.status(500).json({ error: error?.message || "Failed to search academic places" });
+  }
+});
+
+// 4. AI Scholar Research Paper & Course Deep Dive
+app.post("/api/ai/scholar-summary", async (req, res) => {
+  try {
+    const { title, authors, subject, detailType } = req.body; // detailType: 'paper' | 'course'
+    const ai = getGeminiClient();
+
+    if (!ai) {
+      return res.json({
+        summary: `### 🎓 Scholar Deep Dive: ${title}\n- **Field**: ${subject || 'Academic Research'}\n- **Author(s)**: ${authors || 'Research Team'}\n\n#### Core Theoretical Concepts\nThis work established foundational principles still studied across university curricula today.\n\n#### Key Equations & Proof Intuition\n\`\`\`\nObjective Function = Minimize Loss + Regularization Penalty\n\`\`\`\n\n#### Real-World Impact\nHeavily cited in Google Scholar, applied in production industry architectures worldwide.\n\n*(Set GEMINI_API_KEY in Secrets for live AI research monograph generation)*`
+      });
+    }
+
+    const prompt = `Provide an authoritative, graduate-level academic study breakdown of: "${title}" by ${authors} (${subject}).
+Detail Type: ${detailType || 'Research Paper'}.
+Cover:
+1. Executive Abstract & Motivation
+2. Core Mathematical Equations or Algorithmic Framework
+3. Step-by-Step Proof or Architecture Logic
+4. Historical Impact & Google Scholar Citation Significance
+5. 3 Common Exam / Defense Questions and Model Answers.
+Format in clean, structured Markdown.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.8-flash",
+      contents: prompt,
+    });
+
+    res.json({ summary: response.text });
+  } catch (error: any) {
+    console.error("AI Scholar Summary Error:", error);
+    res.status(500).json({ error: error?.message || "Failed to generate scholar summary" });
+  }
+});
+
+// 5. AI Quiz Generator Endpoint
 app.post("/api/ai/quiz", async (req, res) => {
   try {
     const { topic, difficulty, questionCount = 5 } = req.body;
@@ -103,7 +277,7 @@ app.post("/api/ai/quiz", async (req, res) => {
 Create ${questionCount} multiple choice questions. Format output as JSON array of objects with keys: "id", "question", "options" (array of 4 strings), "correctAnswer" (0-based index), and "explanation".`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -118,7 +292,7 @@ Create ${questionCount} multiple choice questions. Format output as JSON array o
   }
 });
 
-// 3. AI Code Explainer & Bug Fixer
+// 6. AI Code Explainer & Bug Fixer
 app.post("/api/ai/code-helper", async (req, res) => {
   try {
     const { code, language, mode } = req.body; // mode: 'explain' | 'fix' | 'optimize'
@@ -135,7 +309,7 @@ app.post("/api/ai/code-helper", async (req, res) => {
       : `Provide a detailed line-by-line explanation and complexity analysis for this ${language} code:\n\`\`\`${language}\n${code}\n\`\`\``;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
     });
 
@@ -146,7 +320,7 @@ app.post("/api/ai/code-helper", async (req, res) => {
   }
 });
 
-// 4. AI Study Planner Endpoint
+// 7. AI Study Planner Endpoint
 app.post("/api/ai/planner", async (req, res) => {
   try {
     const { goal, availableHours, examDate, weakAreas } = req.body;
@@ -161,7 +335,7 @@ app.post("/api/ai/planner", async (req, res) => {
     const prompt = `Create a customized daily study plan for a student with target goal "${goal}", preparing for exam on "${examDate}", studying ${availableHours} hours per day, focusing on weak topics: "${weakAreas}". Return organized markdown study schedule with daily milestones and revision tactics.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
     });
 

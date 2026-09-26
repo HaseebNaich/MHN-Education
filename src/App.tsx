@@ -17,6 +17,8 @@ import { StudentDashboard } from './components/views/StudentDashboard';
 import { TeacherDashboard } from './components/views/TeacherDashboard';
 import { AdminPanel } from './components/views/AdminPanel';
 import { CommunityView } from './components/views/CommunityView';
+import { GoogleScholarView } from './components/views/GoogleScholarView';
+import { AIChatbotView } from './components/views/AIChatbotView';
 
 export function App() {
   const [currentView, setCurrentView] = useState<string>('home');
@@ -141,6 +143,21 @@ export function App() {
         {currentView === 'community' && (
           <CommunityView onOpenAITutor={handleOpenAITutor} />
         )}
+
+        {currentView === 'scholar' && (
+          <GoogleScholarView
+            onOpenAITutor={handleOpenAITutor}
+            onSaveNote={handleSaveNote}
+          />
+        )}
+
+        {currentView === 'chat' && (
+          <AIChatbotView
+            onSaveNote={handleSaveNote}
+            selectedLevel={selectedLevel}
+            setCurrentView={setCurrentView}
+          />
+        )}
       </main>
 
       {/* Footer */}
@@ -151,6 +168,8 @@ export function App() {
         isOpen={isAITutorOpen}
         onClose={() => setIsAITutorOpen(false)}
         initialPrompt={aiTutorPrompt}
+        selectedLevel={selectedLevel}
+        onSaveNote={handleSaveNote}
       />
     </div>
   );

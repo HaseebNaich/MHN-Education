@@ -98,6 +98,16 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentView, setSelectedLevel
           <h4 className="text-white font-semibold text-sm mb-3">AI & Interactive Tools</h4>
           <ul className="space-y-2 text-slate-400">
             <li>
+              <button onClick={() => setCurrentView('scholar')} className="hover:text-indigo-400 transition flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5 text-purple-400" /> Google Scholar Courses & Notes
+              </button>
+            </li>
+            <li>
+              <button onClick={() => setCurrentView('chat')} className="hover:text-indigo-400 transition flex items-center gap-1.5">
+                <Brain className="w-3.5 h-3.5 text-emerald-400" /> Gemini Multi-Turn Chatbot
+              </button>
+            </li>
+            <li>
               <button onClick={() => setCurrentView('programming')} className="hover:text-indigo-400 transition flex items-center gap-1.5">
                 <Code className="w-3.5 h-3.5 text-amber-400" /> Practice Compiler
               </button>

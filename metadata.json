@@ -1,6 +1,6 @@
 {
   "name": "MHN Education",
-  "description": "The Ultimate AI-Powered Free Learning Platform for Grade 1 through Master's level with AI Tutor, Interactive Notes, Practice Compiler, Quizzes, Study Planner, and Educational Library.",
+  "description": "The Ultimate AI-Powered Free Learning Platform for Grade 1 through Master's level with Google Scholar Free Courses & Notes, Multi-Turn Gemini Chatbot, Practice Compiler, Quizzes, Study Planner, and Educational Library.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

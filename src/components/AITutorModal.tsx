@@ -19,7 +19,7 @@ export const AITutorModal: React.FC<AITutorModalProps> = ({
 }) => {
   const [prompt, setPrompt] = useState(initialPrompt);
   const [loading, setLoading] = useState(false);
-  const [response, setResponse] = useState<string | null>(null);
+  const [chatHistory, setChatHistory] = useState<Array<{ role: 'user' | 'model'; content: string }>>([]);
   const [activeMode, setActiveMode] = useState<'concept' | 'quiz' | 'math' | 'code' | 'plan'>('concept');
   const [saved, setSaved] = useState(false);
 
@@ -37,24 +37,25 @@ export const AITutorModal: React.FC<AITutorModalProps> = ({
     if (!query.trim()) return;
 
     setLoading(true);
-    setResponse(null);
     setSaved(false);
+    const updatedHistory = [...chatHistory, { role: 'user' as const, content: query }];
+    setChatHistory(updatedHistory);
+    setPrompt('');
 
     try {
-      const res = await fetch('/api/ai/tutor', {
+      const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: query,
-          level: selectedLevel,
-          subject: activeMode === 'math' ? 'Mathematics' : activeMode === 'code' ? 'Computer Science' : 'General'
+          messages: updatedHistory,
+          academicContext: `Level: ${selectedLevel}, Mode: ${activeMode}`
         })
       });
       const data = await res.json();
-      setResponse(data.text || 'Unable to generate response.');
+      setChatHistory([...updatedHistory, { role: 'model', content: data.text || 'Unable to generate response.' }]);
     } catch (err) {
       console.error(err);
-      setResponse('Failed to connect to AI Tutor server.');
+      setChatHistory([...updatedHistory, { role: 'model', content: 'Failed to connect to AI Tutor server.' }]);
     } finally {
       setLoading(false);
     }
@@ -140,46 +141,58 @@ export const AITutorModal: React.FC<AITutorModalProps> = ({
 
         {/* Content / Chat Output */}
         <div className="flex-1 p-6 overflow-y-auto space-y-4">
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-              <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mb-3" />
-              <p className="text-sm font-medium animate-pulse">MHN AI Teacher is formulating response...</p>
-              <p className="text-xs text-slate-400 mt-1">Analyzing concepts, generating examples, and checking formulas</p>
-            </div>
-          )}
-
-          {!loading && response && (
-            <div className="bg-slate-50 dark:bg-slate-800/60 p-5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-sm leading-relaxed relative group">
-              <div className="flex items-center justify-between mb-3 border-b border-slate-200 dark:border-slate-700/60 pb-2">
-                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" /> MHN AI Explanation
-                </span>
-                {onSaveNote && (
-                  <button
-                    onClick={() => {
-                      onSaveNote(`AI Note: ${prompt.slice(0, 30)}...`, response);
-                      setSaved(true);
-                    }}
-                    className={`px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1 transition ${saved ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-blue-600 hover:text-white'}`}
-                  >
-                    {saved ? <Check className="w-3 h-3" /> : <Bookmark className="w-3 h-3" />}
-                    {saved ? 'Saved to Dashboard' : 'Save Note'}
-                  </button>
-                )}
-              </div>
-              <div className="markdown-body space-y-2">
-                <Markdown>{response}</Markdown>
-              </div>
-            </div>
-          )}
-
-          {!loading && !response && (
+          {chatHistory.length === 0 && !loading && (
             <div className="text-center py-12 text-slate-400 space-y-2">
               <Brain className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700 stroke-1" />
               <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Ask any question to your AI Teacher!</p>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
                 Ask for step-by-step calculus derivations, data structure visualizers, code bug fixes, or custom study guides.
               </p>
+            </div>
+          )}
+
+          {chatHistory.map((item, idx) => (
+            <div key={idx} className={`space-y-1 ${item.role === 'user' ? 'text-right' : 'text-left'}`}>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                {item.role === 'user' ? 'You' : 'MHN AI Professor'}
+              </span>
+              <div
+                className={`p-4 rounded-xl text-xs sm:text-sm leading-relaxed ${
+                  item.role === 'user'
+                    ? 'bg-blue-600 text-white inline-block max-w-[85%] text-left rounded-tr-xs shadow-sm'
+                    : 'bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 w-full'
+                }`}
+              >
+                {item.role === 'model' && (
+                  <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-200 dark:border-slate-700/60">
+                    <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" /> Explanation
+                    </span>
+                    {onSaveNote && (
+                      <button
+                        onClick={() => {
+                          onSaveNote(`AI Note: ${item.content.slice(0, 30)}...`, item.content);
+                          setSaved(true);
+                        }}
+                        className="px-2 py-0.5 rounded text-[11px] font-medium flex items-center gap-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-blue-600 hover:text-white transition"
+                      >
+                        <Bookmark className="w-3 h-3" />
+                        <span>Save Note</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+                <div className="markdown-body space-y-1">
+                  <Markdown>{item.content}</Markdown>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+              <RefreshCw className="w-7 h-7 text-blue-600 animate-spin mb-2" />
+              <p className="text-xs font-medium animate-pulse">MHN AI Teacher is formulating response...</p>
             </div>
           )}
         </div>
